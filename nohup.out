@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap_external>", line 1362, in _path_importer_cache
+KeyError: '/mount/studenten-temp1/users/randomuser/newsreclib_env/lib/python3.9/site-packages/torch/cuda'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/newsreclib/train.py", line 4, in <module>
+    import lightning as L
+  File "/mount/studenten-temp1/users/randomuser/newsreclib_env/lib/python3.9/site-packages/lightning/__init__.py", line 18, in <module>
+    from lightning.fabric.fabric import Fabric  # noqa: E402
+  File "/mount/studenten-temp1/users/randomuser/newsreclib_env/lib/python3.9/site-packages/lightning/fabric/__init__.py", line 35, in <module>
+    from lightning.fabric.fabric import Fabric  # noqa: E402
+  File "/mount/studenten-temp1/users/randomuser/newsreclib_env/lib/python3.9/site-packages/lightning/fabric/fabric.py", line 29, in <module>
+    import torch
+  File "/mount/studenten-temp1/users/randomuser/newsreclib_env/lib/python3.9/site-packages/torch/__init__.py", line 2046, in <module>
+    _C._initExtension(_manager_path())
+  File "/mount/studenten-temp1/users/randomuser/newsreclib_env/lib/python3.9/site-packages/torch/cuda/__init__.py", line 28, in <module>
+    from . import gds
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 982, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 925, in _find_spec
+  File "<frozen importlib._bootstrap_external>", line 1423, in find_spec
+  File "<frozen importlib._bootstrap_external>", line 1392, in _get_spec
+  File "<frozen importlib._bootstrap_external>", line 1364, in _path_importer_cache
+  File "<frozen importlib._bootstrap_external>", line 1340, in _path_hooks
+  File "<frozen importlib._bootstrap_external>", line 1608, in path_hook_for_FileFinder
+  File "<frozen importlib._bootstrap_external>", line 163, in _path_isdir
+  File "<frozen importlib._bootstrap_external>", line 148, in _path_is_mode_type
+  File "<frozen importlib._bootstrap_external>", line 142, in _path_stat
+KeyboardInterrupt

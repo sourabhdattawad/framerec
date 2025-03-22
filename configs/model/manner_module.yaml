@@ -1,0 +1,33 @@
+_target_: newsreclib.models.fair_rec.manner_module.MANNERModule
+
+cr_module_module_ckpt: null
+a_module_categ_ckpt: null
+a_module_sent_ckpt: null
+categ_weight: 0.5
+sent_weight: 0
+
+# outputs
+outputs:
+  test:
+    [
+      "preds",
+      "targets",
+      "cand_news_size",
+      "hist_news_size",
+      "target_categories",
+      "target_sentiments",
+      "hist_categories",
+      "hist_sentiments",
+      "user_ids",
+      "cand_news_ids",
+    ]
+
+# evaluation
+top_k_list: [5, 10]
+num_categ_classes: 18
+num_sent_classes: 3
+save_recs: True
+recs_fpath: "${paths.output_dir}/recommendations.json"
+
+optimizer: null
+scheduler: null
