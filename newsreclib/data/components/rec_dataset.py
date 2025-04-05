@@ -41,8 +41,8 @@ class RecommendationDatasetTrain(MINDDataFrame):
     ) -> Tuple[np.ndarray, np.ndarray, pd.DataFrame, pd.DataFrame, np.ndarray]:
         bhv = self.behaviors.iloc[index]
         
-        # user_id = np.array([int(bhv["uid"])])
-        user_id = np.array([int(bhv["uid"].split("U")[-1])])
+        user_id = np.array([int(bhv["uid"])])
+        #user_id = np.array([int(bhv["uid"].split("U")[-1])])
         user_idx = np.array([int(bhv["user"])])
         history = np.array(bhv["history"])[: self.max_history_len]
         candidates = np.array(bhv["candidates"])
@@ -107,8 +107,8 @@ class RecommendationDatasetTest(MINDDataFrame):
     ) -> Tuple[np.ndarray, np.ndarray, pd.DataFrame, pd.DataFrame, np.ndarray]:
         bhv = self.behaviors.iloc[idx]
 
-        # user_idx = np.array([int(bhv["user"])])
-        user_id = np.array([int(bhv["uid"].split("U")[-1])])
+        user_id = np.array([int(bhv["uid"])])
+        # user_id = np.array([int(bhv["uid"].split("U")[-1])])
         user_idx = np.array([int(bhv["user"])])
         history = np.array(bhv["history"])[: self.max_history_len]
         candidates = np.array(bhv["candidates"])

@@ -288,7 +288,6 @@ class CRModule(AbstractRecommneder):
         torch.Tensor,
     ]:
         scores = self.forward(batch)
-        print(scores)
 
         y_true, mask_cand = to_dense_batch(batch["labels"], batch["batch_cand"])
         candidate_categories, _ = to_dense_batch(batch["x_cand"]["category"], batch["batch_cand"])
@@ -494,31 +493,31 @@ class CRModule(AbstractRecommneder):
 
         # update metrics
         self.test_rec_metrics(preds, targets, **{"indexes": cand_indexes})
-        self.test_categ_div_metrics(preds, target_categories, cand_indexes)
-        self.test_sent_div_metrics(preds, target_sentiments, cand_indexes)
-        self.test_categ_pers_metrics(
-            preds, target_categories, hist_categories, cand_indexes, hist_indexes
-        )
-        self.test_sent_pers_metrics(
-            preds, target_sentiments, hist_sentiments, cand_indexes, hist_indexes
-        )
+        # self.test_categ_div_metrics(preds, target_categories, cand_indexes)
+        # self.test_sent_div_metrics(preds, target_sentiments, cand_indexes)
+        # self.test_categ_pers_metrics(
+        #     preds, target_categories, hist_categories, cand_indexes, hist_indexes
+        # )
+        # self.test_sent_pers_metrics(
+        #     preds, target_sentiments, hist_sentiments, cand_indexes, hist_indexes
+        # )
 
         # log metrics
         self.log_dict(
             self.test_rec_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
-        self.log_dict(
-            self.test_categ_div_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
-        )
-        self.log_dict(
-            self.test_sent_div_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
-        )
-        self.log_dict(
-            self.test_categ_pers_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
-        )
-        self.log_dict(
-            self.test_sent_pers_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
-        )
+        # self.log_dict(
+        #     self.test_categ_div_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        # )
+        # self.log_dict(
+        #     self.test_sent_div_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        # )
+        # self.log_dict(
+        #     self.test_categ_pers_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        # )
+        # self.log_dict(
+        #     self.test_sent_pers_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        # )
 
         # save recommendations
         if self.hparams.save_recs:

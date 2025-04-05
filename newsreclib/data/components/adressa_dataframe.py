@@ -209,7 +209,8 @@ class AdressaDataFrame(Dataset):
         news = self._load_news()
         log.info(f"News data size: {len(news)}")
 
-        behaviors = self._load_behaviors()
+        behaviors = self._load_behaviors()[:500]
+        behaviors  = behaviors.drop_duplicates(["uid"])
         log.info(
             f"Behaviors data size for data split {self.data_split}, validation={self.validation}: {len(behaviors)}"
         )

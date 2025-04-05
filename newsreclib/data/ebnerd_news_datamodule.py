@@ -3,18 +3,15 @@ from typing import Any, Dict, List, Optional
 import torch.nn as nn
 from lightning import LightningDataModule
 from omegaconf.dictconfig import DictConfig
+from pytorch_metric_learning.samplers import MPerClassSampler
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer
 
 from newsreclib.data.components.ebnerd_dataframe import EbnerdDataFrame
-from newsreclib.data.components.rec_dataset import (
-    DatasetCollate,
-    RecommendationDatasetTest,
-    RecommendationDatasetTrain,
-)
+from newsreclib.data.components.news_dataset import DatasetCollate, NewsDataset
 
 
-class EbnerdRecDataModule(LightningDataModule):
+class EbnerdNewsDataModule(LightningDataModule):
     """Example of LightningDataModule for the MIND dataset.
 
     A DataModule implements 6 key methods:
@@ -93,6 +90,10 @@ class EbnerdRecDataModule(LightningDataModule):
             Maximum history length.
         neg_sampling_ratio:
             Number of negatives per positive sample for training.
+        aspect:
+            Aspect to be used as label (e.g., `category`, `sentiment`)
+        samples_per_class:
+            Number of samples per class per batch.
         batch_size:
             How many samples per batch to load.
         num_workers:
@@ -132,6 +133,8 @@ class EbnerdRecDataModule(LightningDataModule):
         tokenizer_max_len: Optional[int],
         max_history_len: int,
         neg_sampling_ratio: float,
+        aspect: str,
+        samples_per_class: int,
         batch_size: int,
         num_workers: int,
         pin_memory: bool,
@@ -146,8 +149,8 @@ class EbnerdRecDataModule(LightningDataModule):
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
+        #file = "/mount/studenten-temp1/users/randomuser/newsreclib/local_models/nb-bert-base"
         file = "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/local_models/xlm-roberta-base"
-
 
         if self.hparams.use_plm:
             assert isinstance(self.hparams.tokenizer_name, str)
@@ -159,7 +162,7 @@ class EbnerdRecDataModule(LightningDataModule):
             self.tokenizer = AutoTokenizer.from_pretrained(
                 file,
                 use_fast=self.hparams.tokenizer_use_fast,
-                model_max_length=self.hparams.tokenizer_max_len,
+                model_max=self.hparams.tokenizer_max_len,
                 local_files_only=True
             )
 
@@ -301,21 +304,20 @@ class EbnerdRecDataModule(LightningDataModule):
                 download=False,
             )
 
-            self.data_train = RecommendationDatasetTrain(
+            self.data_train = NewsDataset(
                 news=trainset.news,
                 behaviors=trainset.behaviors,
-                max_history_len=self.hparams.max_history_len,
-                neg_sampling_ratio=self.hparams.neg_sampling_ratio,
+                aspect=self.hparams.aspect,
             )
-            self.data_val = RecommendationDatasetTest(
+            self.data_val = NewsDataset(
                 news=validset.news,
                 behaviors=validset.behaviors,
-                max_history_len=self.hparams.max_history_len,
+                aspect=self.hparams.aspect,
             )
-            self.data_test = RecommendationDatasetTest(
+            self.data_test = NewsDataset(
                 news=testset.news,
                 behaviors=testset.behaviors,
-                max_history_len=self.hparams.max_history_len,
+                aspect=self.hparams.aspect,
             )
 
     def train_dataloader(self):
@@ -330,7 +332,12 @@ class EbnerdRecDataModule(LightningDataModule):
                 max_abstract_len=self.hparams.max_abstract_len,
                 concatenate_inputs=self.hparams.concatenate_inputs,
             ),
-            shuffle=True,
+            sampler=MPerClassSampler(
+                labels=self.data_train.labels,
+                m=self.hparams.samples_per_class,
+                batch_size=self.hparams.batch_size,
+                length_before_new_iter=len(self.data_train),
+            ),
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             drop_last=self.hparams.drop_last,

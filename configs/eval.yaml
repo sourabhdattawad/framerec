@@ -25,4 +25,4 @@ tags: ["eval"]
 
 # passing checkpoint path is necessary for evaluation
 # example: logs/train/runs/nrms_mindsmall_pretrainedemb_celoss_bertsent_s42/2024-03-08_07-48-40/checkpoints/last.ckpt
-ckpt_path: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_cr_module_adressa_oneweek_plm_celoss_bertsent_s42/2025-03-21_21-01-51/checkpoints/epoch_000.ckpt"
+ckpt_path: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_cr_module_ebnerd_plm_supcon_bertsent_s42/2025-04-02_08-16-28/checkpoints/epoch_001.ckpt"

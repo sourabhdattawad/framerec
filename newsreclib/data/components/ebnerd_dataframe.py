@@ -75,6 +75,8 @@ class EbnerdDataFrame(Dataset):
             Dimensionality of word embeddings.
         sentiment_annotator:
             The sentiment annotator module used.
+        frame_annotator:
+            The frame annotator module used.
         train_date_split:
             A string with the date before which click behaviors are included in the history of a user.
         test_date_split:
@@ -107,6 +109,7 @@ class EbnerdDataFrame(Dataset):
         word_embed_dim: Optional[int],
         categ_embed_dim: Optional[int],
         sentiment_annotator: nn.Module,
+        frame_annotator: nn.Module,
         train_date_split: str,
         test_date_split: str,
         neg_num: int,
@@ -136,6 +139,7 @@ class EbnerdDataFrame(Dataset):
             self.categ_embed_dim = categ_embed_dim
 
         self.sentiment_annotator = sentiment_annotator
+        self.frame_annotator = frame_annotator
 
         self.train_date_split = train_date_split
         self.test_date_split = test_date_split
@@ -217,9 +221,13 @@ class EbnerdDataFrame(Dataset):
             Tuple of news and behaviors datasets.
         """
         news = self._load_news()
+        news['title'] = news['title'].astype(str)
         log.info(f"News data size: {len(news)}")
 
         behaviors = self._load_behaviors()
+        #behaviors  = behaviors.drop_duplicates(["uid"])
+        behaviors["uid"] = behaviors.index
+        behaviors["user"] = behaviors["uid"]
         log.info(
             f"Behaviors data size for data split {self.data_split}, validation={self.validation}: {len(behaviors)}"
         )
@@ -287,6 +295,8 @@ class EbnerdDataFrame(Dataset):
                 usecols=range(len(columns_names)),
             )
             news.title = news.title.fillna("")
+            news.category = news.category.fillna("na")
+            news['category'] = news['category'].astype(str)
             print(news.head)
 
             if not self.use_plm:
@@ -331,6 +341,14 @@ class EbnerdDataFrame(Dataset):
                 news["sentiment_class"], news["sentiment_score"] = zip(*news["sentiment_preds"])
                 news.drop(columns=["sentiment_preds"], inplace=True)
                 log.info("Sentiments computation completed.")
+
+            if "frame_class" in self.dataset_attributes:
+                # compute frame classes
+                log.info("Computing frames.")
+                news["frame_class"] = news["title"].progress_apply(
+                    lambda text: self.frame_annotator(text)
+                )
+                log.info("Computing frames completed.")
 
             if not self.use_plm:
                 # tokenize text
@@ -386,6 +404,26 @@ class EbnerdDataFrame(Dataset):
                     df=pd.DataFrame(sentiment2index.items(), columns=["sentiment", "index"]),
                     fpath=sentiment2index_fpath,
                 )
+            # compute frame classes
+            if (
+                "frame_class" in self.dataset_attributes
+            ):
+                # frame2index map
+                frame2index_fpath = os.path.join(
+                    self.dst_dir,
+                    self.id2index_filenames["frame2index"],
+                )
+                log.info("Constructing frame2index map.")
+                news_frame = news["frame_class"].drop_duplicates().reset_index(drop=True)
+                frame2index = {v: k + 1 for k, v in news_frame.to_dict().items()}
+                log.info(
+                    f"Saving frame2index map of size {len(frame2index)} in {frame2index_fpath}"
+                )
+                file_utils.to_tsv(
+                    df=pd.DataFrame(frame2index.items(), columns=["frame", "index"]),
+                    fpath=frame2index_fpath,
+                )
+                log.info(f"Number of frame classes: {len(frame2index)}.")
 
             log.info(f"Number of category classes: {len(categ2index)}.")
             log.info(f"Number of subcategory classes: {len(subcateg2index)}.")
@@ -437,6 +475,12 @@ class EbnerdDataFrame(Dataset):
                 news["sentiment_class"] = news["sentiment_class"].progress_apply(
                     lambda sentiment: sentiment2index.get(sentiment, 0)
                 )
+            
+            if "frame_class" in self.dataset_attributes:
+                news["frame_class"] = news["frame_class"].progress_apply(
+                    lambda frame: frame2index.get(frame, 0)
+                )
+
 
             # cache parsed news
             for stage in ["train", "dev", "test"]:
@@ -446,7 +490,6 @@ class EbnerdDataFrame(Dataset):
                 file_utils.to_tsv(news, parsed_news_filepath)
 
         news = news.set_index("nid", drop=True)
-
         return news
 
     def _load_behaviors(self) -> pd.DataFrame:
@@ -651,11 +694,12 @@ class EbnerdDataFrame(Dataset):
         news_category = {}
         news_subcategory = {}
         df = pd.read_parquet(filepath)
-        df["title"] = df ["title"] + ". " + df["subtitle"] + ". " + df["body"]
-        print(df.head())
+        df["title"] = df ["title"] # + ". " + df["subtitle"] + ". " + df["body"]
         for index, row in df.iterrows():
             if row["article_id"] not in news_title:
-                news_title[row["article_id"]] = row ["title"] 
+                title = row ["title"].replace("\n", ". ")
+                title = title.replace("\t", ". ")
+                news_title[row["article_id"]] = title
                 news_category[row["article_id"]] = row ["category_str"]
                 news_subcategory[row["article_id"]] = row ["category_str"]
 
@@ -714,6 +758,9 @@ class EbnerdDataFrame(Dataset):
         https://github.com/yjw1029/Efficient-FedRec/blob/839f967c1ed1c0cb0b1b4d670828437ffb712f29/preprocess/adressa_raw.py
         """
 
+        df = pd.DataFrame({})
+
+
         news_lines = []
         for nid in tqdm(news_title):
             nindex = nid2index[nid]
@@ -722,6 +769,7 @@ class EbnerdDataFrame(Dataset):
             subcategory = news_subcategory[nid]
             news_line = "\t".join([str(nindex), category, subcategory, title]) + "\n"
             news_lines.append(news_line)
+        print("new lines", len(news_lines))
 
         for stage in ["train", "dev", "test"]:
             filepath = os.path.join(self.dst_dir, stage)
