@@ -1,0 +1,47 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: npr_rec.yaml
+  - override /model: manner_cr_module.yaml
+  - override /callbacks: default.yaml
+  - override /logger: many_loggers.yaml
+  - override /trainer: gpu.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["manner_cr_module", "npr", "plm", "supcon", "bertsent"]
+
+seed: 42
+
+data:
+  dataset_size: "small"
+  use_plm: True
+  tokenizer_name: FacebookAI/xlm-roberta-base
+  tokenizer_use_fast: True
+  tokenizer_max_len: 96
+  batch_size: 16
+  concatenate_inputs: True
+
+model:
+  temperature: 0.14
+  attributes2encode: ["title"]
+  plm_model: "FacebookAI/xlm-roberta-base"
+  frozen_layers: [0, 1, 2, 3, 4, 5, 6, 7]
+  use_entities: False
+
+callbacks:
+  early_stopping:
+    patience: 3
+
+trainer:
+  max_epochs: 10
+
+logger:
+  wandb:
+    name: "manner_cr_module_npr_plm_supcon_bertsent_s42"
+    tags: ${tags}
+    group: "npr"
