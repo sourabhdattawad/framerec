@@ -1,0 +1,45 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: npr_rec.yaml
+  - override /model: manner_module.yaml
+  - override /callbacks: default.yaml
+  - override /logger: many_loggers.yaml
+  - override /trainer: gpu.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["manner_module", "npr_small", "plm", "supconloss", "bertsent"]
+
+seed: null
+
+train: False
+
+data:
+  dataset_size: "small"
+  use_plm: True
+  tokenizer_name: NbAiLab/nb-bert-base
+  tokenizer_use_fast: True
+  tokenizer_max_len: 96
+  concatenate_inputs: True
+  batch_size: 8
+
+model:
+  cr_module_module_ckpt: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_cr_module_npr_plm_supcon_bertsent_s42/2025-04-20_14-14-37/checkpoints/epoch_001.ckpt"
+  a_module_categ_ckpt: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_a_module_frame_npr_small_plm_supcon_bertsent_s42/2025-04-20_17-05-50/checkpoints/epoch_054.ckpt"
+  a_module_sent_ckpt: ""
+  categ_weight: -0.5
+  sent_weight: 0
+
+logger:
+  wandb:
+    name: "manner_module_npr_small_plm_supconloss_bertsent_s46"
+    tags: ${tags}
+    group: "npr"
+
+
+  #a_module_categ_ckpt: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_a_module_frame_ebnerd_small_plm_supcon_bertsent_s42/2025-04-03_16-30-52/checkpoints/epoch_021.ckpt"
