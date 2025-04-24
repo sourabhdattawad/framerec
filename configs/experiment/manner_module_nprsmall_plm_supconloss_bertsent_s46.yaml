@@ -40,6 +40,3 @@ logger:
     name: "manner_module_npr_small_plm_supconloss_bertsent_s46"
     tags: ${tags}
     group: "npr"
-
-
-  #a_module_categ_ckpt: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_a_module_frame_ebnerd_small_plm_supcon_bertsent_s42/2025-04-03_16-30-52/checkpoints/epoch_021.ckpt"

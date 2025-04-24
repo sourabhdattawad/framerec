@@ -220,7 +220,7 @@ class EbnerdDataFrame(Dataset):
         Returns:
             Tuple of news and behaviors datasets.
         """
-        news = self._load_news()
+        news =  self._load_news()
         news['title'] = news['title'].astype(str)
         log.info(f"News data size: {len(news)}")
 
@@ -537,17 +537,21 @@ class EbnerdDataFrame(Dataset):
 
 
                 log.info("Compressed files not processed. Reading behavior data.")
-                # uid2index, user_info = self._process_users(
-                #     os.path.join(self.data_dir, self.data_split), nid2index
-                # )
 
-                if self.data_split!="train":
+                if self.data_split=="test":
                     df_beh = pd.read_parquet(os.path.join(self.data_dir, "validation", "behaviors.parquet") )
                     df_history = pd.read_parquet(os.path.join(self.data_dir, "validation", "history.parquet") )
+                    merged_df = df_beh.merge(df_history, on="user_id", how="left")
                 else:
                     df_beh = pd.read_parquet(os.path.join(self.data_dir, "train", "behaviors.parquet") )
                     df_history = pd.read_parquet(os.path.join(self.data_dir, "train",  "history.parquet"))
-                merged_df = df_beh.merge(df_history, on="user_id", how="left")
+                    merged_df = df_beh.merge(df_history, on="user_id", how="left")
+                    train_df, val_df = train_test_split(merged_df, test_size=0.10, random_state=42)
+                    if self.data_split=="train":
+                        merged_df = train_df
+                    else:
+                        merged_df = val_df
+                    
                 def convert_to_nid(row):
                     res = []
                     for i in row:
@@ -577,30 +581,6 @@ class EbnerdDataFrame(Dataset):
                         "formatted_binary_label":"impressions"
                         }
                 )
-                # for index, row in merged_df:
-
-                # print(merged_df.head())
-                # log.info("Sorting user behavior data chronologically.")
-                # for uid in tqdm(user_info):
-                #     user_info[uid].sort_click()
-
-                # log.info("Constructing behaviors.")
-                # self.train_lines = []
-                # self.test_lines = []
-                # for uid in tqdm(user_info):
-                #     uinfo = user_info[uid]
-                #     train_news = uinfo.train_news
-                #     test_news = uinfo.test_news
-                #     hist_news = uinfo.hist_news
-                #     self._construct_behaviors(uid, hist_news, train_news, test_news, news_title)
-
-                # shuffle(self.train_lines)
-                # shuffle(self.test_lines)
-
-                # test_split_lines, dev_split_lines = train_test_split(
-                #     self.test_lines, test_size=self.user_dev_size, random_state=self.seed
-                # )
-
  
             behaviors = merged_df
 
@@ -627,18 +607,7 @@ class EbnerdDataFrame(Dataset):
                     uid2index = self._process_users(
                         os.path.join(self.data_dir), nid2index
                     )
-                    # # compute uid2index map
-                    # log.info("Constructing uid2index map.")
-                    # uid2index = {}
-                    # for idx in tqdm(behaviors.index.tolist()):
-                    #     uid = behaviors.loc[idx]["uid"]
-                    #     if uid not in uid2index:
-                    #         uid2index[uid] = len(uid2index) + 1
-            #         fpath = os.path.join(self.dst_dir, self.id2index_filenames["uid2index"])
-            # file_utils.to_tsv(
-            #             df=pd.DataFrame(uid2index.items(), columns=["uid", "index"]), fpath=fpath
-            # )
-
+ 
                     fpath = os.path.join(self.dst_dir, self.id2index_filenames["uid2index"])
                     log.info(f"Saving uid2index map of size {len(uid2index)} in {fpath}")
                     file_utils.to_tsv(
@@ -694,7 +663,7 @@ class EbnerdDataFrame(Dataset):
         news_category = {}
         news_subcategory = {}
         df = pd.read_parquet(filepath)
-        df["title"] = df ["title"] # + ". " + df["subtitle"] + ". " + df["body"]
+        df["title"] = df["title"] # + ". " + df["subtitle"] + ". " + df["body"]
         for index, row in df.iterrows():
             if row["article_id"] not in news_title:
                 title = row ["title"].replace("\n", ". ")
@@ -702,42 +671,7 @@ class EbnerdDataFrame(Dataset):
                 news_title[row["article_id"]] = title
                 news_category[row["article_id"]] = row ["category_str"]
                 news_subcategory[row["article_id"]] = row ["category_str"]
-
-
-
-        # tar = tarfile.open(filepath, "r:gz", encoding="utf-8")
-        # files = tar.getmembers()
-
-        # for file in tqdm(files):
-        #     f = tar.extractfile(file)
-        #     if f is not None:
-        #         for line in f.readlines():
-        #             line = line.decode("utf-8")
-        #             event_dict = json.loads(line.strip("\n"))
-
-        #             if "id" in event_dict and "title" in event_dict and "category1" in event_dict:
-        #                 if event_dict["id"] not in news_title:
-        #                     news_title[event_dict["id"]] = event_dict["title"]
-        #                 else:
-        #                     assert news_title[event_dict["id"]] == event_dict["title"]
-
-        #                 if event_dict["id"] not in news_category:
-        #                     news_category[event_dict["id"]] = event_dict["category1"].split("|")[0]
-        #                 else:
-        #                     assert (
-        #                         news_category[event_dict["id"]]
-        #                         == event_dict["category1"].split("|")[0]
-        #                     )
-
-        #                 if event_dict["id"] not in news_subcategory:
-        #                     news_subcategory[event_dict["id"]] = event_dict["category1"].split(
-        #                         "|"
-        #                     )[-1]
-        #                 else:
-        #                     assert (
-        #                         news_subcategory[event_dict["id"]]
-        #                         == event_dict["category1"].split("|")[-1]
-        #                     )
+     
 
         nid2index = {
             k: "N" + str(v) for k, v in zip(news_title.keys(), range(1, len(news_title) + 1))

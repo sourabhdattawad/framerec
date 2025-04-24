@@ -516,16 +516,24 @@ class NPRDataFrame(Dataset):
                 df_beh = df_beh.sample(frac=1, random_state=42).reset_index(drop=True)
 
                 # Split into train and test sets
-                train_df, test_df = train_test_split(df_beh, test_size=0.2, random_state=42)
+                # First split: 70% train, 30% temp
+                train_df, temp_df = train_test_split(df_beh, test_size=0.3, random_state=42)
+
+                # Second split: from temp, 1/3 val, 2/3 test
+                val_df, test_df = train_test_split(temp_df, test_size=2/3, random_state=42)
+
+                # Save the splits
                 train_df.to_parquet(os.path.join(self.data_dir, "train", "behaviors.parquet"))
-                test_df.to_parquet(os.path.join(self.data_dir , "validation", "behaviors.parquet"))
+                val_df.to_parquet(os.path.join(self.data_dir, "validation", "behaviors.parquet"))
+                test_df.to_parquet(os.path.join(self.data_dir, "test", "behaviors.parquet"))
                 
-
-
-                if self.data_split!="train":
+                if self.data_split=="dev":
                     df_beh = pd.read_parquet(os.path.join(self.data_dir, "validation", "behaviors.parquet") )
-                else:
+                elif self.data_split=="train":
                     df_beh = pd.read_parquet(os.path.join(self.data_dir, "train", "behaviors.parquet") )
+                else:
+                    df_beh = pd.read_parquet(os.path.join(self.data_dir, "test", "behaviors.parquet") )
+
                 def convert_to_nid(row):
                     res = []
                     for i in row:
@@ -678,17 +686,15 @@ class NPRDataFrame(Dataset):
         news_category = {}
         news_subcategory = {}
         df = pd.read_parquet(filepath)
-        df["title"] = df ["title"] # + ". " + df["subtitle"] + ". " + df["body"]
+        # df["title"] = df ["title"] # + ". " + df["subtitle"] + ". " + df["body"]
         print(df.head())
         for index, row in df.iterrows():
             if row["newsId"] not in news_title:
-                title = row ["title"].replace("\n", ". ")
-                title = title.replace("\t", ". ")
-                news_title[row["newsId"]] = title
-                news_category[row["newsId"]] = "temp"
-                news_subcategory[row["newsId"]] = "temp"
-
-
+                combined_text = row ["combined_text"].replace("\n", ". ")
+                combined_text = combined_text.replace("\t", ". ")
+                news_title[row["newsId"]] = combined_text
+                news_category[row["newsId"]] = row["category_str"]
+                news_subcategory[row["newsId"]] = row["category_str"]
 
         # tar = tarfile.open(filepath, "r:gz", encoding="utf-8")
         # files = tar.getmembers()
@@ -775,8 +781,8 @@ class NPRDataFrame(Dataset):
         uid2index = {}
         # user_info = defaultdict(lambda: UserInfo(self.train_date_split, self.test_date_split))
 
-        for split in ["train", "validation"]:
-            df_beh = pd.read_parquet(os.path.join(filepath, split, "behaviors.parquet"))
+        for split in ["train", "validation", "test"]:
+            df_beh = pd.read_parquet(os.path.join(filepath, "behaviors.parquet"))
             for index, row in df_beh.iterrows():
                 uid = str(row["userId"])
                 if uid not in uid2index:
