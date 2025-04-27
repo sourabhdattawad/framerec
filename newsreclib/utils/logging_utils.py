@@ -17,9 +17,16 @@ def log_hyperparameters(object_dict: dict) -> None:
         object_dict: Dictionary of hyperparameters for each module in the pipeline.
     """
 
+    def remove_exp_name(d):
+        if isinstance(d, dict):
+            d = {k: remove_exp_name(v) for k, v in d.items() if k != "exp_name"}
+        elif isinstance(d, list):
+            d = [remove_exp_name(i) for i in d]
+        return d
+
     hparams = {}
 
-    cfg = OmegaConf.to_container(object_dict["cfg"])
+    cfg = OmegaConf.to_container(object_dict["cfg"], resolve=True)
     model = object_dict["model"]
     trainer = object_dict["trainer"]
 
@@ -27,9 +34,11 @@ def log_hyperparameters(object_dict: dict) -> None:
         log.warning("Logger not found! Skipping hyperparameter logging...")
         return
 
+    # sanitize config first
+    cfg = remove_exp_name(cfg)
+
     hparams["model"] = cfg["model"]
 
-    # save number of model parameters
     hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
     hparams["model/params/trainable"] = sum(
         p.numel() for p in model.parameters() if p.requires_grad
@@ -40,10 +49,8 @@ def log_hyperparameters(object_dict: dict) -> None:
 
     hparams["data"] = cfg["data"]
     hparams["trainer"] = cfg["trainer"]
-
     hparams["callbacks"] = cfg.get("callbacks")
     hparams["extras"] = cfg.get("extras")
-
     hparams["task_name"] = cfg.get("task_name")
     hparams["tags"] = cfg.get("tags")
     hparams["ckpt_path"] = cfg.get("ckpt_path")
@@ -52,3 +59,4 @@ def log_hyperparameters(object_dict: dict) -> None:
     # send hparams to all loggers
     for logger in trainer.loggers:
         logger.log_hyperparams(hparams)
+

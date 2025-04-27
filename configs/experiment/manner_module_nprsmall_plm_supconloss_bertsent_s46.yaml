@@ -27,16 +27,19 @@ data:
   tokenizer_max_len: 96
   concatenate_inputs: True
   batch_size: 8
+  
 
 model:
-  cr_module_module_ckpt: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_cr_module_npr_plm_supcon_bertsent_s42/2025-04-20_14-14-37/checkpoints/epoch_001.ckpt"
-  a_module_categ_ckpt: "/mount/studenten-temp1/users/randomuser/newsreclib_new/newsreclib/logs/train/runs/manner_a_module_frame_npr_small_plm_supcon_bertsent_s42/2025-04-20_17-05-50/checkpoints/epoch_054.ckpt"
+  cr_module_module_ckpt: "/mount/arbeitsdaten33/projekte/tcl/tclext/sourabh/new/newsreclib_new/newsreclib/logs/train/runs/manner_cr_module_npr_plm_supcon_bertsent_s42/2025-04-25_11-47-14/checkpoints/epoch_006.ckpt"
+  a_module_categ_ckpt: "/mount/arbeitsdaten33/projekte/tcl/tclext/sourabh/new/newsreclib_new/newsreclib/logs/train/runs/manner_a_module_frame_npr_small_plm_supcon_bertsent_s42/2025-04-26_23-41-17/checkpoints/epoch_034.ckpt"
   a_module_sent_ckpt: ""
-  categ_weight: -0.5
+  categ_weight: 0
   sent_weight: 0
-
+  test_beh_path: "/mount/arbeitsdaten33/projekte/tcl/tclext/sourabh/new/newsreclib_new/newsreclib/data/npr/npr_small/test/parsed_behaviors.tsv"
+  test_news_path: "/mount/arbeitsdaten33/projekte/tcl/tclext/sourabh/new/newsreclib_new/newsreclib/data/npr/npr_small/test/parsed_news.tsv"
+  exp_name: "manner_module_npr_small_plm_supconloss_bertsent_s42"
 logger:
   wandb:
-    name: "manner_module_npr_small_plm_supconloss_bertsent_s46"
+    name: "manner_module_npr_small_plm_supconloss_bertsent_${model.categ_weight}"
     tags: ${tags}
-    group: "npr"
+    group: "npr_manner"

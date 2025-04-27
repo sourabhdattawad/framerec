@@ -13,6 +13,13 @@ from newsreclib.models.abstract_recommender import AbstractRecommneder
 from newsreclib.models.components.layers.click_predictor import DotProduct
 from newsreclib.models.fair_rec.manner_a_module import AModule
 from newsreclib.models.fair_rec.manner_cr_module import CRModule
+from newsreclib.metrics.radio_div import (
+    compute_activation,
+    compute_calibration,
+    compute_representation,
+)
+
+import pandas as pd
 
 
 class MANNERModule(AbstractRecommneder):
@@ -66,6 +73,9 @@ class MANNERModule(AbstractRecommneder):
         recs_fpath: Optional[str],
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
+        test_beh_path: str,
+        test_news_path: str,
+        exp_name: str
     ) -> None:
         super().__init__(
             outputs=outputs,
@@ -81,15 +91,13 @@ class MANNERModule(AbstractRecommneder):
 
         # load ensemble components
         self.cr_module = CRModule.load_from_checkpoint(
-            checkpoint_path=self.hparams.cr_module_module_ckpt,
-            strict=False
+            checkpoint_path=self.hparams.cr_module_module_ckpt, strict=False
         )
 
         if self.hparams.categ_weight != 0:
             assert isinstance(self.hparams.a_module_categ_ckpt, str)
             self.a_module_categ = AModule.load_from_checkpoint(
-                checkpoint_path=self.hparams.a_module_categ_ckpt,
-                strict=False
+                checkpoint_path=self.hparams.a_module_categ_ckpt, strict=False
             )
         if self.hparams.sent_weight != 0:
             assert isinstance(self.hparams.a_module_sent_ckpt, str)
@@ -156,18 +164,24 @@ class MANNERModule(AbstractRecommneder):
     ) -> torch.Tensor:
         # encode clicked news
         hist_news_vector = model.news_encoder(batch["x_hist"])
-        hist_news_vector_agg, mask_hist = to_dense_batch(hist_news_vector, batch["batch_hist"])
+        hist_news_vector_agg, mask_hist = to_dense_batch(
+            hist_news_vector, batch["batch_hist"]
+        )
 
         # encode candidate news
         cand_news_vector = model.news_encoder(batch["x_cand"])
-        cand_news_vector_agg, mask_cand = to_dense_batch(cand_news_vector, batch["batch_cand"])
+        cand_news_vector_agg, mask_cand = to_dense_batch(
+            cand_news_vector, batch["batch_cand"]
+        )
 
         # aggregated history
         hist_size = torch.tensor(
             [torch.where(mask_hist[i])[0].shape[0] for i in range(mask_hist.shape[0])],
             device=self.device,
         )
-        user_vector = torch.div(hist_news_vector_agg.sum(dim=1), hist_size.unsqueeze(dim=-1))
+        user_vector = torch.div(
+            hist_news_vector_agg.sum(dim=1), hist_size.unsqueeze(dim=-1)
+        )
 
         scores = self.click_predictor(
             user_vector.unsqueeze(dim=1), cand_news_vector_agg.permute(0, 2, 1)
@@ -183,7 +197,9 @@ class MANNERModule(AbstractRecommneder):
         ).unsqueeze(-1)
         scores = torch.div(
             scores
-            - torch.div(torch.sum(scores, dim=1), cand_size).unsqueeze(-1).expand_as(scores),
+            - torch.div(torch.sum(scores, dim=1), cand_size)
+            .unsqueeze(-1)
+            .expand_as(scores),
             std_devs,
         )
 
@@ -208,9 +224,7 @@ class MANNERModule(AbstractRecommneder):
     def on_train_start(self) -> None:
         pass
 
-    def model_step(
-        self, batch: RecommendationBatch
-    ) -> Tuple[
+    def model_step(self, batch: RecommendationBatch) -> Tuple[
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,
@@ -225,13 +239,19 @@ class MANNERModule(AbstractRecommneder):
         scores = self.forward(batch)
 
         y_true, mask_cand = to_dense_batch(batch["labels"], batch["batch_cand"])
-        candidate_categories, _ = to_dense_batch(batch["x_cand"]["category"], batch["batch_cand"])
-        candidate_sentiments, _ = to_dense_batch(batch["x_cand"]["sentiment"], batch["batch_cand"])
+        candidate_categories, _ = to_dense_batch(
+            batch["x_cand"]["category"], batch["batch_cand"]
+        )
+        candidate_sentiments, _ = to_dense_batch(
+            batch["x_cand"]["sentiment"], batch["batch_cand"]
+        )
 
         clicked_categories, mask_hist = to_dense_batch(
             batch["x_hist"]["category"], batch["batch_hist"]
         )
-        clicked_sentiments, _ = to_dense_batch(batch["x_hist"]["sentiment"], batch["batch_hist"])
+        clicked_sentiments, _ = to_dense_batch(
+            batch["x_hist"]["sentiment"], batch["batch_hist"]
+        )
 
         # model outputs for metric computation
         preds = self._collect_model_outputs(scores, mask_cand)
@@ -295,20 +315,38 @@ class MANNERModule(AbstractRecommneder):
         preds = self._gather_step_outputs(self.test_step_outputs, "preds")
         targets = self._gather_step_outputs(self.test_step_outputs, "targets")
 
-        target_categories = self._gather_step_outputs(self.test_step_outputs, "target_categories")
-        target_sentiments = self._gather_step_outputs(self.test_step_outputs, "target_sentiments")
+        target_categories = self._gather_step_outputs(
+            self.test_step_outputs, "target_categories"
+        )
+        target_sentiments = self._gather_step_outputs(
+            self.test_step_outputs, "target_sentiments"
+        )
 
-        hist_categories = self._gather_step_outputs(self.test_step_outputs, "hist_categories")
-        hist_sentiments = self._gather_step_outputs(self.test_step_outputs, "hist_sentiments")
+        hist_categories = self._gather_step_outputs(
+            self.test_step_outputs, "hist_categories"
+        )
+        hist_sentiments = self._gather_step_outputs(
+            self.test_step_outputs, "hist_sentiments"
+        )
 
-        cand_news_size = self._gather_step_outputs(self.test_step_outputs, "cand_news_size")
-        hist_news_size = self._gather_step_outputs(self.test_step_outputs, "hist_news_size")
+        cand_news_size = self._gather_step_outputs(
+            self.test_step_outputs, "cand_news_size"
+        )
+        hist_news_size = self._gather_step_outputs(
+            self.test_step_outputs, "hist_news_size"
+        )
 
-        cand_indexes = torch.arange(cand_news_size.shape[0]).repeat_interleave(cand_news_size)
-        hist_indexes = torch.arange(hist_news_size.shape[0]).repeat_interleave(hist_news_size)
+        cand_indexes = torch.arange(cand_news_size.shape[0]).repeat_interleave(
+            cand_news_size
+        )
+        hist_indexes = torch.arange(hist_news_size.shape[0]).repeat_interleave(
+            hist_news_size
+        )
 
         user_ids = self._gather_step_outputs(self.test_step_outputs, "user_ids")
-        cand_news_ids = self._gather_step_outputs(self.test_step_outputs, "cand_news_ids")
+        cand_news_ids = self._gather_step_outputs(
+            self.test_step_outputs, "cand_news_ids"
+        )
 
         # update metrics
         self.test_rec_metrics(preds, targets, **{"indexes": cand_indexes})
@@ -323,7 +361,11 @@ class MANNERModule(AbstractRecommneder):
 
         # log metrics
         self.log_dict(
-            self.test_rec_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
+            self.test_rec_metrics,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
         )
         # self.log_dict(
         #     self.test_categ_div_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
@@ -350,5 +392,27 @@ class MANNERModule(AbstractRecommneder):
                 recommendations=recommendations_dico, fpath=self.hparams.recs_fpath
             )
 
+        recommendations = self._load_recommendations(self.hparams.recs_fpath)
+        df_beh = pd.read_csv(self.hparams.test_beh_path, sep="\t")
+        df_beh["uid"] = df_beh.index
+        df_beh["uid"] = df_beh["uid"].astype(str).radd("U")
+        df_news = pd.read_csv(self.hparams.test_news_path, sep="\t")
+
+        calibration = compute_calibration(df_news, df_beh, recommendations)
+        activation = compute_activation(df_news, df_beh, recommendations)
+        representation = compute_representation(df_news, df_beh, recommendations)
+        self.log_dict({
+            "test/calibration (category)": calibration,
+            "test/activation (sentiment)": activation,
+            "test/representation (frame)": representation
+        })
+
         # clear memory for the next epoch
         self.test_step_outputs = self._clear_epoch_outputs(self.test_step_outputs)
+
+    def _load_recommendations(self, fpath):
+        import json
+
+        with open(fpath, "r") as f:
+            recommendations = json.load(f)
+        return recommendations
