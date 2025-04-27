@@ -663,7 +663,7 @@ class EbnerdDataFrame(Dataset):
         news_category = {}
         news_subcategory = {}
         df = pd.read_parquet(filepath)
-        df["title"] = df["title"] # + ". " + df["subtitle"] + ". " + df["body"]
+        df["title"] = df["title"]  + ". " + df["subtitle"] + ". " + df["body"]
         for index, row in df.iterrows():
             if row["article_id"] not in news_title:
                 title = row ["title"].replace("\n", ". ")
